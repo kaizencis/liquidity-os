@@ -1,0 +1,70 @@
+# --- OS ---
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+env/
+*.so
+
+# --- Node / JS (dashboard, telegram) ---
+node_modules/
+.next/
+.cache/
+dist/
+build/
+*.tsbuildinfo
+
+# --- Rust (if collector uses Rust) ---
+target/
+Cargo.lock
+
+# --- IDE ---
+.idea/
+.vscode/
+*.sublime-*
+*.code-workspace
+
+# --- Environment ---
+.env
+.env.local
+.env.*.local
+
+# --- Docker ---
+docker/data/
+docker/logs/
+
+# --- Secrets ---
+*.pem
+*.key
+*.cert
+service-account*.json
+credentials*.json
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Testing ---
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- ML / Data ---
+*.parquet
+*.feather
+*.h5
+mlruns/
+wandb/

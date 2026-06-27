@@ -1,0 +1,106 @@
+version: "3.9"
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # ─── Database ───
+  postgres:
+    image: postgres:16-alpine
+    container_name: liquidity-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: liquidity_os
+      POSTGRES_USER: ${POSTGRES_USER:-liquidity}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-liquidity_dev}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U liquidity"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    logging: *default-logging
+
+  redis:
+    image: redis:7-alpine
+    container_name: liquidity-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    logging: *default-logging
+
+  # ─── Apps (stubs) ───
+  collector:
+    build:
+      context: .
+      dockerfile: docker/collector.Dockerfile
+    container_name: liquidity-collector
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    logging: *default-logging
+
+  analytics:
+    build:
+      context: .
+      dockerfile: docker/analytics.Dockerfile
+    container_name: liquidity-analytics
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - .env
+    logging: *default-logging
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: docker/dashboard.Dockerfile
+    container_name: liquidity-dashboard
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - .env
+    logging: *default-logging
+
+  telegram:
+    build:
+      context: .
+      dockerfile: docker/telegram.Dockerfile
+    container_name: liquidity-telegram
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - .env
+    logging: *default-logging
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local

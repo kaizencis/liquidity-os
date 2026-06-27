@@ -34,10 +34,10 @@ Liquidity OS is a modular, multi-agent platform for automated liquidity manageme
 │  │  └──────────────┘ └──────────────┘                        │  │
 │  └───────────────────────────────────────────────────────────┘  │
 │                                                                 │
-│  ┌──────────┐  ┌──────────┐                                    │
-│  │   Luna   │  │  Aspro   │  ← Agents (consumer layer)         │
-│  │  Agent   │  │  Agent   │                                    │
-│  └──────────┘  └──────────┘                                    │
+│  ┌──────────┐  ┌──────────────┐                                │
+│  │  Oracle  │  │  Navigator   │  ← Agents (consumer layer)     │
+│  │  Agent   │  │  Agent       │                                │
+│  └──────────┘  └──────────────┘                                │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -51,7 +51,7 @@ Liquidity OS is a modular, multi-agent platform for automated liquidity manageme
 | **Domain (shared)** | Entities, value objects, ports, events | **Zero imports** from outside this layer |
 | **Packages** | Business logic, data access, feature computation | Import only from Domain |
 | **Apps** | Entrypoints, HTTP servers, bot handlers | Import from Packages + Domain |
-| **Agents** | Autonomous processes (Luna, Aspro) | Import from Packages + Domain, communicate via bus |
+| **Agents** | Autonomous processes (Oracle, Navigator) | Import from Packages + Domain, communicate via bus |
 | **Infrastructure** | Docker, CI/CD, deployment | Composes apps and agents |
 
 ---
@@ -95,23 +95,23 @@ Liquidity OS is a modular, multi-agent platform for automated liquidity manageme
 | **Folder** | `apps/telegram/` |
 | **Role** | User-facing interface for alerts, approvals, reports, and manual commands. |
 | **Key ports used** | `Notifier` (implements it), `PoolRepository` (read-only) |
-| **Does NOT** | Own business logic — renders data from APIs, writes approvals to Aspro's queue. |
+| **Does NOT** | Own business logic — renders data from APIs, writes approvals to Navigator's queue. |
 
-### Luna Agent (Monitor)
+### Oracle Agent (Monitor)
 
 | | |
 |---|---|
-| **Folder** | `agents/luna/` |
+| **Folder** | `agents/oracle/` |
 | **Role** | "Eyes of the system." Continuously monitors pool health, detects anomalies, and generates alerts. Stateless — reads metrics from Analytics API. |
 | **Key ports used** | `Notifier`, `FeatureStore` |
 | **Does NOT** | Rebalance. Only watches and alerts. |
 | **Plugin model** | Monitors are pluggable — add a file in `monitors/`, register it, done. |
 
-### Aspro Agent (Executor)
+### Navigator Agent (Executor)
 
 | | |
 |---|---|
-| **Folder** | `agents/aspro/` |
+| **Folder** | `agents/navigator/` |
 | **Role** | "Hands of the system." Handles rebalancing execution: strategy calculation, simulation, transaction building, and approval workflows. |
 | **Key ports used** | `FeatureStore`, `PoolRepository` |
 | **Does NOT** | Hold wallet keys. Builds and proposes transactions; signing is external. |
@@ -158,7 +158,7 @@ Liquidity OS is a modular, multi-agent platform for automated liquidity manageme
 |---|---|
 | **Role** | Audit trail for every agent decision. Records: who decided, what action, which features/rules triggered it, what the outcome was. Immutable append-only log. |
 | **Dependencies** | M1 (shared — entities/agent, events) |
-| **Used by** | Luna, Aspro (write), Analytics, Dashboard, Telegram (read) |
+| **Used by** | Oracle, Navigator (write), Analytics, Dashboard, Telegram (read) |
 
 ### Simulation Engine (`packages/simulation/`)
 
@@ -188,7 +188,7 @@ Collector Service ──► PoolUpdated ──► Feature Store
                     AlertTriggered            RebalanceProposed
                           │                         │
                           ▼                         ▼
-                    Luna (confirms)           Aspro (executes)
+                    Oracle (confirms)        Navigator (executes)
                           │                         │
                           ▼                         ▼
                     Notifier                  ActionQueue
@@ -200,8 +200,8 @@ Collector Service ──► PoolUpdated ──► Feature Store
 1. **Collector** ingests pool data → emits `PoolUpdated`
 2. **Feature Store** recomputes features → triggers downstream evaluation
 3. **Analytics** reads features, runs Rule Engine → emits signals
-4. **Luna** monitors for anomalies → emits `AlertTriggered`
-5. **Aspro** receives rebalance proposals → builds transactions → approval workflow
+4. **Oracle** monitors for anomalies → emits `AlertTriggered`
+5. **Navigator** receives rebalance proposals → builds transactions → approval workflow
 6. **Decision Log** records every decision from steps 3-5
 
 ---
@@ -217,7 +217,7 @@ These are non-negotiable. Every code review must verify them.
 | 1 | **Domain imports nothing** outside `packages/shared/` | Ensures domain logic is testable without any infrastructure |
 | 2 | **Ports are interfaces** — infra implements them | Dependency inversion: domain defines contracts, infra fulfills them |
 | 3 | **Apps are thin entrypoints** — no business logic in `main.py` | Logic belongs in packages; apps wire dependencies and start loops |
-| 4 | **Agents communicate via bus** — never import each other | Decoupling: Luna and Aspro can be developed, tested, deployed independently |
+| 4 | **Agents communicate via bus** — never import each other | Decoupling: Oracle and Navigator can be developed, tested, deployed independently |
 | 5 | **Every public function is unit-testable** | Pure logic in domain and use cases; IO mocked at port boundaries |
 | 6 | **Configuration is explicit** — no magic constants | Every tunable value lives in settings / env vars |
 | 7 | **Errors are typed** — no bare `Exception` | Enables precise error handling at every boundary |
@@ -279,7 +279,7 @@ rule-engine   ╳── database (goes through ports)
 The Decision Log is an **immutable audit trail**. Every action the system takes — alert triggered, rebalance proposed, rule evaluated — is recorded with:
 
 - `timestamp` — when the decision was made
-- `agent` — which agent made it (Luna, Aspro, or system)
+- `agent` — which agent made it (Oracle, Navigator, or system)
 - `event_type` — what kind of decision (alert, rebalance, escalation)
 - `trigger` — which rule or condition caused it
 - `features` — snapshot of feature values at decision time
@@ -287,7 +287,7 @@ The Decision Log is an **immutable audit trail**. Every action the system takes 
 - `metadata` — freeform JSON for context
 
 **Why it exists:**
-- Debugging: "Why did Aspro rebalance at 3am?"
+- Debugging: "Why did Navigator rebalance at 3am?"
 - Auditing: compliance, post-mortem analysis
 - Simulation: replay decisions with modified rules to compare outcomes
 - Trust: operators can see exactly why the system acted
@@ -301,7 +301,7 @@ The Simulation Engine replays historical data through the current Rule Engine co
 **Use cases:**
 - **Pre-deployment validation:** Before pushing a new rule, simulate it against last 30 days of data. Compare outcomes with current production rules.
 - **Strategy backtesting:** Test rebalancing strategies against historical volatility events.
-- **Dry-run mode:** Run Aspro's logic without actually building transactions.
+- **Dry-run mode:** Run Navigator's logic without actually building transactions.
 
 **Architecture:**
 - Reads historical snapshots from the database
@@ -319,12 +319,12 @@ The Simulation Engine replays historical data through the current Rule Engine co
 
 ## Service Communication Matrix
 
-| From → To | Collector | Analytics | Luna | Aspro | Telegram | Dashboard |
+| From → To | Collector | Analytics | Oracle | Navigator | Telegram | Dashboard |
 |-----------|:---------:|:---------:|:----:|:-----:|:--------:|:---------:|
 | **Collector** | — | events | — | — | — | — |
 | **Analytics** | — | — | metrics | signals | reports | metrics |
-| **Luna** | — | — | — | — | alerts | — |
-| **Aspro** | — | — | — | — | approvals | status |
+| **Oracle** | — | — | — | — | alerts | — |
+| **Navigator** | — | — | — | — | approvals | status |
 | **Telegram** | — | query | query | query | — | — |
 | **Dashboard** | — | query | query | query | — | — |
 

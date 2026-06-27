@@ -29,8 +29,8 @@
 | Codename | Public Name | Folder | Role |
 |----------|-------------|--------|------|
 | **Hermes** | Collector Service | `apps/collector/` | Data ingestion, event emission |
-| **Luna** | Luna Agent | `agents/luna/` | Monitoring, alerting |
-| **Aspro** | Aspro Agent | `agents/aspro/` | Execution, rebalancing |
+| **Oracle** | Oracle Agent | `agents/oracle/` | Monitoring, alerting |
+| **Navigator** | Navigator Agent | `agents/navigator/` | Execution, rebalancing |
 
 > Hermes is an **internal codename only** — not exposed in APIs, UI, or agent roles.
 
@@ -53,7 +53,7 @@ M2  (Decision Log)                    │                  │
        │                              │                      │
        │                              │               ┌──────┴──────┐
        │                              │               ▼             ▼
-       │                              │          M10 (Luna)   M11 (Aspro)
+       │                              │          M10 (Oracle)  M11 (Navigator)
        │                              │               │             │
        │                              │               └──────┬──────┘
        │                              │                      ▼
@@ -146,7 +146,7 @@ packages/shared/
 | `entities/decision.py` | Shared type for the Decision Log — every agent and service writes to it. |
 | `value_objects/price.py` | Price math is subtle (sqrtPrice, tick index, decimal scaling). Encapsulated once here. |
 | `ports/*.py` | Clean architecture hinges on dependency inversion. These ABCs let infra code depend on domain, not vice versa. |
-| `ports/decision_log.py` | Audit trail interface — used by Luna, Aspro, Analytics to record decisions. |
+| `ports/decision_log.py` | Audit trail interface — used by Oracle, Navigator, Analytics to record decisions. |
 | `events.py` | Decouples components: collector emits `PoolUpdated`, rule engine subscribes, no direct coupling. |
 
 #### Dependencies
@@ -205,7 +205,7 @@ packages/decision-log/
 
 | Depends on | Used by |
 |------------|---------|
-| M1 (shared) | M10 (Luna — logs alerts), M11 (Aspro — logs executions), M9 (Analytics — reads for reports) |
+| M1 (shared) | M10 (Oracle — logs alerts), M11 (Navigator — logs executions), M9 (Analytics — reads for reports) |
 
 ---
 
@@ -354,7 +354,7 @@ The Collector Service is the system's central nervous system — it ingests all 
 
 | Depends on | Used by |
 |------------|---------|
-| M1, M3, M4 | M6 (Feature Store), M9 (Analytics), M10 (Luna), M11 (Aspro) |
+| M1, M3, M4 | M6 (Feature Store), M9 (Analytics), M10 (Oracle), M11 (Navigator) |
 
 ---
 
@@ -399,7 +399,7 @@ packages/feature-store/
 
 | Depends on | Used by |
 |------------|---------|
-| M1, M3 | M7 (Simulation), M8 (Rule Engine), M9 (Analytics), M10 (Luna) |
+| M1, M3 | M7 (Simulation), M8 (Rule Engine), M9 (Analytics), M10 (Oracle) |
 
 ---
 
@@ -421,7 +421,7 @@ packages/simulation/
 ├── replay.py               # ReplayEngine — steps through historical snapshots
 ├── scenario.py             # Scenario — defines what to test (time range, rule config)
 ├── reporter.py             # Compare outcomes: current rules vs. modified rules
-├── executor.py             # DryRunExecutor — runs Aspro logic without transactions
+├── executor.py             # DryRunExecutor — runs Navigator logic without transactions
 ├── snapshot.py             # SnapshotLoader — loads historical data from DB
 ├── settings.py             # Simulation config (max steps, timeout, output format)
 ├── pyproject.toml
@@ -436,7 +436,7 @@ packages/simulation/
 - **ReplayEngine is deterministic** — given the same snapshots and rule config, it produces the same decisions every time.
 - **Scenario is a data class** — time range, rule overrides, feature overrides. Serializable to JSON for reproducibility.
 - **Reporter produces structured output** — JSON diff between current and proposed rule outcomes. Consumed by dashboard and Telegram.
-- **DryRunExecutor wraps Aspro logic** — same strategy code, different output (log instead of transaction).
+- **DryRunExecutor wraps Navigator logic** — same strategy code, different output (log instead of transaction).
 - **Does NOT touch production** — reads historical snapshots, writes to simulation output (separate table or file).
 
 #### Why this milestone exists
@@ -507,7 +507,7 @@ then alert("High volatility in concentrated pool")
 
 | Depends on | Used by |
 |------------|---------|
-| M1 (shared), M6 (Feature Store) | M7 (Simulation), M9 (Analytics), M10 (Luna), M11 (Aspro) |
+| M1 (shared), M6 (Feature Store) | M7 (Simulation), M9 (Analytics), M10 (Oracle), M11 (Navigator) |
 
 ---
 
@@ -559,24 +559,24 @@ apps/analytics/Dockerfile
 
 | Depends on | Used by |
 |------------|---------|
-| M1, M3, M6, M8 | M10 (Luna — reads signals), M12 (Telegram — reports) |
+| M1, M3, M6, M8 | M10 (Oracle — reads signals), M12 (Telegram — reports) |
 
 ---
 
-### M10 — Luna Agent (Monitor)
+### M10 — Oracle Agent (Monitor)
 
 | Field | Value |
 |-------|-------|
-| **Goal** | Autonomous monitoring agent that continuously evaluates pool health, detects anomalies, and generates alerts. Luna is the "eyes" of the system. |
+| **Goal** | Autonomous monitoring agent that continuously evaluates pool health, detects anomalies, and generates alerts. Oracle is the "eyes" of the system. |
 | **Expected output** | Runnable agent process with configurable monitoring loops and alert dispatch |
-| **Folders affected** | `agents/luna/` |
+| **Folders affected** | `agents/oracle/` |
 | **Difficulty** | 🟡 Medium |
 | **Dependencies** | M1 (shared — ports/notifier), M6 (Feature Store), M9 (Analytics — metrics API) |
 
 #### Files to create
 
 ```
-agents/luna/src/
+agents/oracle/src/
 ├── __init__.py
 ├── main.py                  # Agent entrypoint, lifecycle
 ├── settings.py              # Pool watchlist, alert thresholds, check interval
@@ -591,22 +591,22 @@ agents/luna/src/
 │   └── severity.py          # Alert severity levels, escalation rules
 └── reporter.py              # Generate periodic status reports
 
-agents/luna/tests/
+agents/oracle/tests/
 ├── test_pool_health.py
 ├── test_anomaly.py
 └── test_dispatcher.py
 
-agents/luna/pyproject.toml
-agents/luna/Dockerfile
+agents/oracle/pyproject.toml
+agents/oracle/Dockerfile
 ```
 
 #### Key design decisions
 
-- **Luna is stateless** — reads metrics from Analytics API, writes alerts to message bus / DB. No local state beyond configuration.
+- **Oracle is stateless** — reads metrics from Analytics API, writes alerts to message bus / DB. No local state beyond configuration.
 - **Monitors are plugins** — add a new monitor by creating a file in `monitors/` and registering it. No changes to core logic.
 - **Alerts go through the Notifier port** — Telegram, Slack, webhook — all pluggable.
-- **Luna does NOT rebalance** — she only watches and alerts. Execution is Aspro's job.
-- **Every decision is logged** — Luna calls Decision Log on every alert generated.
+- **Oracle does NOT rebalance** — it only watches and alerts. Execution is Navigator's job.
+- **Every decision is logged** — Oracle calls Decision Log on every alert generated.
 
 #### Dependencies
 
@@ -616,20 +616,20 @@ agents/luna/Dockerfile
 
 ---
 
-### M11 — Aspro Agent (Executor)
+### M11 — Navigator Agent (Executor)
 
 | Field | Value |
 |-------|-------|
 | **Goal** | Execution agent that handles rebalancing actions: calculates target allocations, simulates impact, prepares transactions, and manages approval workflows. |
 | **Expected output** | Runnable agent process with action queue, transaction builder, and approval state machine |
-| **Folders affected** | `agents/aspro/` |
+| **Folders affected** | `agents/navigator/` |
 | **Difficulty** | 🔴 Very High |
 | **Dependencies** | M1 (shared — ports, entities), M3 (Database — persist actions), M8 (Rule Engine — triggers), M9 (Analytics — signals) |
 
 #### Files to create
 
 ```
-agents/aspro/src/
+agents/navigator/src/
 ├── __init__.py
 ├── main.py                  # Agent entrypoint, lifecycle
 ├── settings.py              # Slippage tolerance, max tx size, approval config
@@ -647,23 +647,23 @@ agents/aspro/src/
     ├── __init__.py
     └── action_queue.py      # Persistent queue of pending actions
 
-agents/aspro/tests/
+agents/navigator/tests/
 ├── test_strategy.py
 ├── test_simulator.py
 ├── test_workflow.py
 └── test_action_queue.py
 
-agents/aspro/pyproject.toml
-agents/aspro/Dockerfile
+agents/navigator/pyproject.toml
+agents/navigator/Dockerfile
 ```
 
 #### Key design decisions
 
-- **Aspro never holds keys** — transaction signing is delegated to a wallet service / hardware module. Aspro only builds and proposes transactions.
+- **Navigator never holds keys** — transaction signing is delegated to a wallet service / hardware module. Navigator only builds and proposes transactions.
 - **Approval workflow is a state machine** — clear states: `draft → pending → approved → executed | rejected → cancelled`.
 - **Auto-approve thresholds** — small rebalances (configurable) skip human approval. Large moves require manual confirm (via Telegram).
 - **Action queue is persisted in Postgres** — survives agent restart.
-- **Every decision is logged** — Aspro calls Decision Log on every execution attempt.
+- **Every decision is logged** — Navigator calls Decision Log on every execution attempt.
 
 #### Dependencies
 
@@ -681,7 +681,7 @@ agents/aspro/Dockerfile
 | **Expected output** | Runnable Telegram bot with command handlers, inline keyboards, and notification dispatch |
 | **Folders affected** | `apps/telegram/` |
 | **Difficulty** | 🟡 Medium |
-| **Dependencies** | M1, M9 (Analytics — reports), M10 (Luna — alerts), M11 (Aspro — approvals) |
+| **Dependencies** | M1, M9 (Analytics — reports), M10 (Oracle — alerts), M11 (Navigator — approvals) |
 
 #### Files to create
 
@@ -713,7 +713,7 @@ apps/telegram/Dockerfile
 
 #### Key design decisions
 
-- **Telegram is a view layer** — it renders data from APIs, never owns business logic. Approval "yes/no" writes to Aspro's action queue, nothing more.
+- **Telegram is a view layer** — it renders data from APIs, never owns business logic. Approval "yes/no" writes to Navigator's action queue, nothing more.
 - **python-telegram-bot v21+** — async-native, webhook support.
 - **Formatter is pure** — `Pool -> str`, no IO. Easy to unit test and ensures consistent message formatting.
 - **Notifications go through the Notifier port** — if the bot is down, notifications queue in DB for retry.
@@ -734,7 +734,7 @@ apps/telegram/Dockerfile
 | **Expected output** | Runnable web app with real-time charts, pool overview, and agent activity log |
 | **Folders affected** | `apps/dashboard/` |
 | **Difficulty** | 🟡 Medium |
-| **Dependencies** | M1, M3 (read models), M6 (Feature Store), M9 (Analytics), M10 (Luna), M11 (Aspro) |
+| **Dependencies** | M1, M3 (read models), M6 (Feature Store), M9 (Analytics), M10 (Oracle), M11 (Navigator) |
 
 #### Files to create
 
@@ -840,8 +840,8 @@ docs/
 | **M7** | **Simulation Engine** | `packages/simulation/` | 🟡 Medium | M1, M6, M8 |
 | **M8** | **Rule Engine Package** | `packages/rule-engine/` | 🟠 High | M1, M6 |
 | **M9** | **Analytics Service** | `apps/analytics/` | 🟡 Medium | M1, M3, M6, M8 |
-| **M10** | **Luna Agent (Monitor)** | `agents/luna/` | 🟡 Medium | M1, M6, M9 |
-| **M11** | **Aspro Agent (Executor)** | `agents/aspro/` | 🔴 Very High | M1, M3, M8, M9 |
+| **M10** | **Oracle Agent (Monitor)** | `agents/oracle/` | 🟡 Medium | M1, M6, M9 |
+| **M11** | **Navigator Agent (Executor)** | `agents/navigator/` | 🔴 Very High | M1, M3, M8, M9 |
 | **M12** | **Telegram Bot App** | `apps/telegram/` | 🟡 Medium | M1, M9, M10, M11 |
 | **M13** | **Dashboard App** | `apps/dashboard/` | 🟡 Medium | M1, M3, M6, M9-M11 |
 | **M14** | **Production Readiness** | `.github/`, `docker/`, `docs/`, `scripts/` | 🟡 Medium | All |
@@ -855,10 +855,10 @@ These rules apply to every milestone. Violations must be rejected during review.
 1. **Domain layer imports NOTHING** outside `packages/shared/`. No FastAPI, no SQLAlchemy, no httpx, no Redis, no `os`, no `dotenv`. This is absolute.
 2. **Ports are interfaces, not implementations.** Infra packages implement ports, domain never knows about them.
 3. **Apps are thin entrypoints.** They wire dependencies and start loops. Business logic lives in packages or use-case services.
-4. **Agents communicate through the bus, not by importing each other.** Luna → bus → Aspro, never `from agents.aspro import ...`.
+4. **Agents communicate through the bus, not by importing each other.** Oracle → bus → Navigator, never `from agents.navigator import ...`.
 5. **Every public function is unit-testable.** Pure logic in domain and use cases. IO is mocked at the port boundary.
 6. **Configuration is explicit.** No magic constants in code. Everything configurable via settings / env.
 7. **Errors are typed.** Every domain exception has a distinct class. No bare `Exception` or `assert False`.
-8. **Every agent decision is logged.** Luna and Aspro must write to Decision Log before executing any action.
+8. **Every agent decision is logged.** Oracle and Navigator must write to Decision Log before executing any action.
 9. **Architectural comments are mandatory.** Every public class/model/interface/service includes: why it exists, which layer owns it, which layers may depend on it, one usage example. See `docs/architecture.md` for the format.
 10. **Readability over brevity.** Clear names, explicit logic, short functions, type hints everywhere. No clever one-liners, no magic numbers.

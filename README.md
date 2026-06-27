@@ -11,7 +11,7 @@ Liquidity OS is an intelligent, multi-agent orchestration platform purpose-built
 Automated liquidity management today is fragmented — siloed scripts, manual Telegram pings, disconnected dashboards, and no unified intelligence. Liquidity OS solves this by providing:
 
 - **Real-time collection** — On-chain and off-chain data pipelines with low-latency ingestion.
-- **Multi-agent intelligence** — Specialized AI agents (Hermes, Luna, Aspro) that coordinate to monitor, analyze, and act.
+- **Multi-agent intelligence** — Specialized AI agents (Hermes as Collector Service, Oracle, Navigator) that coordinate to monitor, analyze, and act.
 - **Feature engineering at scale** — A dedicated feature store and rule engine for deriving and acting on market signals.
 - **Omnichannel operations** — Telegram-native ops with support for alerts, approvals, and interactive commands.
 - **Production-grade foundation** — Clean monorepo with Docker Compose, CI/CD, and observability from day one.
@@ -38,8 +38,8 @@ Automated liquidity management today is fragmented — siloed scripts, manual Te
 │  └─────────────────────────────────────────────────────┘  │
 │                                                          │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐               │
-│  │  Hermes  │  │   Luna   │  │  Aspro   │               │
-│  │  Agent   │  │   Agent  │  │  Agent   │               │
+│  │ Collector│  │  Oracle  │  │ Navigator│               │
+│  │ Service  │  │  Agent   │  │  Agent   │               │
 │  └──────────┘  └──────────┘  └──────────┘               │
 │                                                          │
 └──────────────────────────────────────────────────────────┘
@@ -50,7 +50,7 @@ Automated liquidity management today is fragmented — siloed scripts, manual Te
 | Layer | Description |
 |-------|-------------|
 | **Apps** | Runnable entrypoints — data collector, analytics engine, web dashboard, Telegram bot interface |
-| **Agents** | Autonomous AI agents with distinct roles (Hermes as orchestrator, Luna as monitor, Aspro as executor) |
+| **Agents** | Autonomous AI agents with distinct roles (Hermes as Collector Service, Oracle as monitor, Navigator as executor) |
 | **Packages** | Shared libraries — database access, common types, feature store, rule engine |
 | **Infra** | Docker Compose orchestration, CI/CD pipelines, deployment scripts |
 
@@ -59,8 +59,8 @@ Automated liquidity management today is fragmented — siloed scripts, manual Te
 | Agent  | Role |
 |--------|------|
 | **Hermes** | Orchestrator — coordinates tasks, delegates to sub-agents, manages workflows |
-| **Luna**   | Monitor — tracks pool conditions, alerts on anomalies, generates reports |
-| **Aspro**  | Executor — handles rebalancing, approvals, and transaction submission |
+| **Oracle** | Monitor — tracks pool conditions, alerts on anomalies, generates reports |
+| **Navigator** | Executor — handles rebalancing, approvals, and transaction submission |
 
 ---
 
@@ -75,8 +75,8 @@ liquidity-os/
 │   └── telegram/           # Telegram bot interface
 ├── agents/                 # AI agent definitions & logic
 │   ├── hermes/             # Hermes orchestrator agent
-│   ├── luna/               # Luna monitoring agent
-│   └── aspro/              # Aspro execution agent
+│   ├── oracle/             # Oracle monitoring agent
+│   └── navigator/          # Navigator execution agent
 ├── packages/               # Shared libraries
 │   ├── database/           # Database models, migrations, repositories
 │   ├── shared/             # Common types, utilities, constants
@@ -110,15 +110,15 @@ liquidity-os/
 - [ ] Database — persistent storage & indexing
 - [ ] Historical data backfill pipeline
 
-### Phase 3 — Intelligence
+**Phase 3 — Intelligence**
 - [ ] Rule Engine — rebalancing rules & triggers
-- [ ] Luna Agent — pool monitoring & anomaly detection
+- [ ] Oracle Agent — pool monitoring & anomaly detection
 - [ ] Analytics service — metrics computation
 - [ ] Alerting system
 
-### Phase 4 — Automation
-- [ ] Aspro Agent — rebalancing execution & approval flows
-- [ ] Hermes Agent — multi-agent orchestration
+**Phase 4 — Automation**
+- [ ] Navigator Agent — rebalancing execution & approval flows
+- [ ] Hermes Collector Service — data ingestion and event emission
 - [ ] Telegram App — interactive bot with commands & notifications
 - [ ] Dashboard — real-time visualization
 

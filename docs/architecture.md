@@ -332,6 +332,84 @@ All communication goes through the **database** (persistent state) or **domain e
 
 ---
 
+## Architectural Comments (Mandatory)
+
+Every **public** class, model, interface, and service must include a concise docstring that answers exactly four questions. No exceptions. This is not optional — it is part of the architecture.
+
+### Format
+
+```python
+class PoolRepository(ABC):
+    """[WHY] Persists and retrieves Pool entities from the data store.
+
+    [OWNERSHIP] Domain layer — defines the contract for pool persistence.
+
+    [DEPENDENTS] Allowed: database (implements), collector, analytics, dashboard.
+                Forbidden: shared, agents (must go through ports).
+
+    [EXAMPLE]
+        repo = PostgresPoolRepository(session)
+        pool = await repo.get_by_address("7YttLkHDoNj9wyDur5pM1ejNaAvT9X4eSTY...")
+    """
+```
+
+### The Four Questions
+
+| # | Question | What to write |
+|---|----------|---------------|
+| 1 | **Why does this exist?** | The problem it solves. One sentence. |
+| 2 | **Which layer owns it?** | Domain, Package, App, or Agent. |
+| 3 | **Which layers depend on it?** | Allowed importers. Explicit "Forbidden" list if non-obvious. |
+| 4 | **One practical example** | Realistic usage snippet. Not abstract — concrete code. |
+
+### Rules
+
+- **Public** = any class, function, or constant that is importable from outside its module (`__all__`, no leading underscore).
+- **Private helpers** (`_internal`, `_impl`) — comment is optional but recommended.
+- **Comments must be placed as the first statement** in the class/function body (docstring).
+- **Keep it concise** — max 8 lines per docstring. If you need more, your design is too complex.
+- **Readability over brevity** — prefer clear variable names and explicit control flow over clever one-liners. Long-term maintenance wins.
+
+---
+
+## Code Style: Readability First
+
+This project prioritizes **readability and long-term maintenance** over brevity.
+
+### Principles
+
+1. **Names > Comments** — if a variable needs a comment to explain it, rename it.
+2. **Explicit > Clever** — `if pool.status == PoolStatus.ACTIVE` beats `if pool.is_active`.
+3. **Short functions** — max 30 lines. If longer, extract.
+4. **Single Responsibility** — one class does one thing. If you use "and" to describe it, split it.
+5. **No magic numbers** — extract to named constants with units: `MAX_SLIPPAGE_BPS = 50`.
+6. **Type hints everywhere** — function signatures, return types, class attributes.
+7. **Docstrings on all public APIs** — following the Architectural Comments format above.
+
+### Forbidden Patterns
+
+```python
+# ❌ Clever one-liner
+x = [p for p in pools if p.tvl > 1e6 and p.volatility > 0.1]
+
+# ✅ Readable
+high_value_pools = [
+    pool
+    for pool in pools
+    if pool.tvl > MIN_TVL_USD
+    and pool.volatility > VOLATILITY_THRESHOLD
+]
+
+# ❌ Magic number
+if time.time() - last_update > 300:
+
+# ✅ Named constant
+POOL_STALENESS_SECONDS = 300  # 5 minutes
+if time.time() - last_update > POOL_STALENESS_SECONDS:
+```
+
+---
+
 ## File: docs/architecture.md
 
 **Why this file exists:**

@@ -860,3 +860,5 @@ These rules apply to every milestone. Violations must be rejected during review.
 6. **Configuration is explicit.** No magic constants in code. Everything configurable via settings / env.
 7. **Errors are typed.** Every domain exception has a distinct class. No bare `Exception` or `assert False`.
 8. **Every agent decision is logged.** Luna and Aspro must write to Decision Log before executing any action.
+9. **Architectural comments are mandatory.** Every public class/model/interface/service includes: why it exists, which layer owns it, which layers may depend on it, one usage example. See `docs/architecture.md` for the format.
+10. **Readability over brevity.** Clear names, explicit logic, short functions, type hints everywhere. No clever one-liners, no magic numbers.

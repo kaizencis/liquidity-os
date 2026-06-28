@@ -1,0 +1,17 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "liquidity-os-decision-log"
+version = "0.1.0"
+description = "Decision log for Liquidity OS"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.0.0",
+    "sqlalchemy>=2.0.0",
+    "asyncpg>=0.29.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["decision_log"]

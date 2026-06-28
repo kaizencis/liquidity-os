@@ -56,9 +56,9 @@ Automated liquidity management today is fragmented — siloed scripts, manual Te
 
 ### Agents
 
-| Agent  | Role |
-|--------|------|
-| **Hermes** | Orchestrator — coordinates tasks, delegates to sub-agents, manages workflows |
+| Component | Role |
+|-----------|------|
+| **Collector Service** | Ingests pool data from Meteora DLMM, emits domain events (codename: Hermes) |
 | **Oracle** | Monitor — tracks pool conditions, alerts on anomalies, generates reports |
 | **Navigator** | Executor — handles rebalancing, approvals, and transaction submission |
 
@@ -73,8 +73,8 @@ liquidity-os/
 │   ├── analytics/          # Analytics & ML inference service
 │   ├── dashboard/          # Web dashboard (metrics, charts, controls)
 │   └── telegram/           # Telegram bot interface
+├── apps/collector/         # Collector Service (codename: Hermes)
 ├── agents/                 # AI agent definitions & logic
-│   ├── hermes/             # Hermes orchestrator agent
 │   ├── oracle/             # Oracle monitoring agent
 │   └── navigator/          # Navigator execution agent
 ├── packages/               # Shared libraries
